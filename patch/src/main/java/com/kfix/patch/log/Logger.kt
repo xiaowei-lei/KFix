@@ -12,7 +12,8 @@ class Logger {
             System.out.flush()
         }
 
-        fun progressEnd() {
+        fun progressEnd(tag: String, text: String) {
+            progress(tag, text)
             println()
         }
     }

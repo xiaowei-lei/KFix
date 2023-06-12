@@ -1,7 +1,6 @@
-package com.example.plugin.patch.apkanalyzer
+package com.kfix.patch.apkanalyzer
 
 import com.android.tools.proguard.ProguardMap
-import com.kfix.patch.apkanalyzer.ApkDisassembler
 import io.kotest.assertions.assertionCounter
 import io.kotest.assertions.collectOrThrow
 import io.kotest.assertions.eq.eq
@@ -24,13 +23,13 @@ class ApkDisassemblerTest {
     fun `should disassemble correct result when obfuscated class exist in apk`() {
         val disassembleResult = apkDisassembler.disassemble("e2.c")
         disassembleResult.shouldNotBeNull()
-        disassembleResult.obfuscatedClassName shouldBe "e2.c"
+        disassembleResult.obfuscatedFullyQualifiedClassName shouldBe "e2.c"
         val expectObfuscatedSmaliText = File("src/test/resources/apks/v1/e2.c.smali").readText()
-        disassembleResult.obfuscatedSmaliText shouldBeIgnoreLine expectObfuscatedSmaliText
+        disassembleResult.obfuscatedClassDef.smaliText() shouldBeIgnoreLine expectObfuscatedSmaliText
 
-        disassembleResult.clearClassNameProvider() shouldBe "com.example.kotlinhotfix.demo.changed.ChangedClass"
+        disassembleResult.clearFullyQualifiedClassName shouldBe "com.example.kotlinhotfix.demo.changed.ChangedClass"
         val expectClearSmaliText = File("src/test/resources/apks/v1/com.example.kotlinhotfix.demo.changed.ChangedClass.smali").readText()
-        disassembleResult.clearSmaliTextProvider() shouldBeIgnoreLine expectClearSmaliText
+        disassembleResult.clearClassDef.smaliText() shouldBeIgnoreLine expectClearSmaliText
     }
 
     private infix fun String.shouldBeIgnoreLine(expected: String) {

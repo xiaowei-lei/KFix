@@ -1,4 +1,4 @@
-package com.example.plugin.patch.apkanalyzer
+package com.kfix.patch.apkanalyzer
 
 import com.android.tools.apk.analyzer.dex.PackageTreeCreator
 import com.android.tools.apk.analyzer.internal.SigUtils
@@ -45,25 +45,19 @@ class KFixDexDisassembler(dexFile: DexBackedDexFile, proguardMap: ProguardMap?) 
         )
     }
 
-    private fun classCount(): Int = classDefMap.size
+    fun asClassDefSequence(): Sequence<ClassDef> {
+        return classDefMap.values.asSequence()
+    }
 
+    fun classCount(): Int = classDefMap.size
+
+    /**
+     * @param fqcn fully qualified class name (e.g."com.example.MyClass")
+     */
     @Throws(IOException::class)
-    fun disassembleClass(fqcn: String): String {
-        val className =
-            PackageTreeCreator.decodeClassName(SigUtils.typeToSignature(fqcn), proguardMap)
-        val classDef: ClassDef? = getClassDef(className)
-        checkNotNull(classDef) { "Unable to locate class definition for $className" }
-        return classDef.smaliText()
-    }
-
-    fun onEachClassDef(action: (index: Int, total: Int, classDef: ClassDef) -> Unit) {
-        classDefMap.onEachIndexed { index, classDefEntry ->
-            action.invoke(index, classCount(), classDefEntry.value)
-        }
-    }
-
-    private fun getClassDef(fqcn: String): ClassDef? {
-        val signature = SigUtils.typeToSignature(fqcn)
+    fun disassembleClass(fqcn: String): ClassDef? {
+        val className = PackageTreeCreator.decodeClassName(SigUtils.typeToSignature(fqcn), proguardMap)
+        val signature = SigUtils.typeToSignature(className)
         return classDefMap[signature]
     }
 
@@ -119,7 +113,7 @@ class KFixDexDisassembler(dexFile: DexBackedDexFile, proguardMap: ProguardMap?) 
             return classDef.type
         }
 
-        override fun getAnnotations(): MutableSet<out Annotation> {
+        override fun getAnnotations(): Set<Annotation> {
             return classDef.annotations.toSortedSet()
         }
 

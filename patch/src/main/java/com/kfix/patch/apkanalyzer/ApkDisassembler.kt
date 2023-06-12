@@ -3,8 +3,7 @@ package com.kfix.patch.apkanalyzer
 import com.android.tools.apk.analyzer.dex.DexFiles
 import com.android.tools.apk.analyzer.internal.SigUtils
 import com.android.tools.proguard.ProguardMap
-import com.example.plugin.patch.apkanalyzer.KFixDexDisassembler
-import com.example.plugin.patch.apkanalyzer.smaliText
+import com.android.tools.smali.dexlib2.iface.ClassDef
 import java.io.File
 import java.util.zip.ZipFile
 
@@ -13,7 +12,7 @@ class ApkDisassembler(
     private val proguardMap: ProguardMap,
 ) {
 
-    private val dexDisassemblerPairs = mutableListOf<DisassemblerPair>()
+    private val dexDisassemblerPairs: List<DisassemblerPair>
 
     data class DisassemblerPair(
         val clearDexDisassembler: KFixDexDisassembler,
@@ -22,21 +21,19 @@ class ApkDisassembler(
 
     init {
         ZipFile(apkFile.absolutePath).use { sourceZipFile ->
-            sourceZipFile.entries().toList().filter {
+            dexDisassemblerPairs = sourceZipFile.entries().toList().filter {
                 it.name.endsWith(".dex")
-            }.forEach { entry ->
+            }.map { entry ->
                 val dexBytes = sourceZipFile.getInputStream(entry).readAllBytes()
                 val dexFile = DexFiles.getDexFile(dexBytes)
-                dexDisassemblerPairs.add(
-                    DisassemblerPair(
-                        clearDexDisassembler = KFixDexDisassembler(
-                            dexFile = dexFile,
-                            proguardMap = proguardMap
-                        ),
-                        obfuscatedDexDisassembler = KFixDexDisassembler(
-                            dexFile = dexFile,
-                            proguardMap = ProguardMap()
-                        )
+                DisassemblerPair(
+                    clearDexDisassembler = KFixDexDisassembler(
+                        dexFile = dexFile,
+                        proguardMap = proguardMap
+                    ),
+                    obfuscatedDexDisassembler = KFixDexDisassembler(
+                        dexFile = dexFile,
+                        proguardMap = ProguardMap()
                     )
                 )
             }
@@ -45,60 +42,50 @@ class ApkDisassembler(
 
     private fun dexCount(): Int = dexDisassemblerPairs.size
 
-    fun onEachClass(action: (Position, DisassembleResult) -> Unit) {
-        dexDisassemblerPairs.forEachIndexed { dexIndex, pair ->
-            pair.obfuscatedDexDisassembler.onEachClassDef { index, total, classDef ->
-                val obfuscatedClassName = SigUtils.signatureToName(classDef.type)
-                action(
-                    Position(
-                        dexIndex = dexIndex,
-                        dexCount = dexCount(),
-                        classCountInDex = total,
-                        classIndexInDex = index
-                    ),
-                    DisassembleResult(
-                        obfuscatedClassName = obfuscatedClassName,
-                        obfuscatedSmaliText = classDef.smaliText(),
-                        clearClassNameProvider = { clearClassNameOf(obfuscatedClassName) },
-                        clearSmaliTextProvider = {
-                            pair.clearDexDisassembler.disassembleClass(
-                                clearClassNameOf(
-                                    obfuscatedClassName
-                                )
+    fun asDisassembleSequence(): Sequence<DisassembleResult> {
+        return dexDisassemblerPairs.asSequence()
+            .flatMapIndexed { dexIndex: Int, disassemblerPair: DisassemblerPair ->
+                val obfuscatedDisassembler = disassemblerPair.obfuscatedDexDisassembler
+                val clearDisassembler = disassemblerPair.clearDexDisassembler
+                obfuscatedDisassembler.asClassDefSequence()
+                    .mapIndexedNotNull { index: Int, obfuscatedClassDef: ClassDef ->
+                        val obfuscatedClassName = SigUtils.signatureToName(obfuscatedClassDef.type)
+                        val position =
+                            "Dex: ${dexIndex + 1}/${dexCount()}, Class: ${index}/${obfuscatedDisassembler.classCount()}"
+                        val clearClassDef =
+                            clearDisassembler.disassembleClass(clearClassNameOf(obfuscatedClassName))
+                        if (clearClassDef != null) {
+                            DisassembleResult(
+                                obfuscatedClassDef = obfuscatedClassDef,
+                                clearClassDef = clearClassDef,
+                                position = position
+
                             )
+                        } else {
+                            null
                         }
-                    ))
-            }
-        }
-    }
-
-    data class Position(
-        private val dexCount: Int,
-        private val dexIndex: Int,
-        private val classCountInDex: Int,
-        private val classIndexInDex: Int,
-    ) {
-        val description =
-            "Dex: ${dexIndex + 1}/${dexCount}, Class: ${classIndexInDex}/${classCountInDex}"
-    }
-
-    fun disassemble(obfuscatedClassName: String): DisassembleResult? {
-        dexDisassemblerPairs.forEachIndexed { _, pair ->
-            val obfuscatedSmaliText = kotlin.runCatching {
-                pair.obfuscatedDexDisassembler.disassembleClass(obfuscatedClassName)
-            }.getOrNull()
-            if (obfuscatedSmaliText != null) {
-                return DisassembleResult(
-                    obfuscatedClassName = obfuscatedClassName,
-                    obfuscatedSmaliText = obfuscatedSmaliText,
-                    clearClassNameProvider = { clearClassNameOf(obfuscatedClassName) },
-                    clearSmaliTextProvider = {
-                        pair.clearDexDisassembler.disassembleClass(obfuscatedClassName)
                     }
-                )
             }
-        }
-        return null
+    }
+
+    fun disassemble(obfuscatedFullyQualifiedClassName: String): DisassembleResult? {
+        return dexDisassemblerPairs.asSequence().mapNotNull { disassemblerPair: DisassemblerPair ->
+            val obfuscatedClassDef = disassemblerPair.obfuscatedDexDisassembler.disassembleClass(
+                obfuscatedFullyQualifiedClassName
+            )
+            if (obfuscatedClassDef != null) {
+                val clearClassDef = disassemblerPair.clearDexDisassembler.disassembleClass(
+                    clearClassNameOf(obfuscatedFullyQualifiedClassName)
+                )
+                if (clearClassDef != null) {
+                    return@mapNotNull DisassembleResult(
+                        obfuscatedClassDef = obfuscatedClassDef,
+                        clearClassDef = clearClassDef
+                    )
+                }
+            }
+            return@mapNotNull null
+        }.firstOrNull()
     }
 
     private fun clearClassNameOf(obfuscatedClassName: String): String {
@@ -106,9 +93,11 @@ class ApkDisassembler(
     }
 
     data class DisassembleResult(
-        val obfuscatedClassName: String,
-        val obfuscatedSmaliText: String,
-        val clearClassNameProvider: () -> String,
-        val clearSmaliTextProvider: () -> String,
-    )
+        val obfuscatedClassDef: ClassDef,
+        val clearClassDef: ClassDef,
+        val position: String? = null,
+    ) {
+        val obfuscatedFullyQualifiedClassName: String = SigUtils.signatureToName(obfuscatedClassDef.type)
+        val clearFullyQualifiedClassName: String = SigUtils.signatureToName(clearClassDef.type)
+    }
 }

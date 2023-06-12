@@ -21,4 +21,5 @@ dependencies {
 
     testImplementation ("junit:junit:4.13.2")
     testImplementation ("io.kotest:kotest-assertions-core:5.5.5")
+    testImplementation("io.mockk:mockk:1.12.0")
 }

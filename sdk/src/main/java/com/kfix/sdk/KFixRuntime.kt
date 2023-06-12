@@ -5,7 +5,7 @@ import java.lang.reflect.Field
 import java.util.zip.ZipFile
 
 /**
- * 形成如下结构的classLoader树结构:
+ * The structure of ClassLoader tree:
  * ---BootClassLoader
  * ----PatchDexClassLoader
  * ------PathClassLoader
