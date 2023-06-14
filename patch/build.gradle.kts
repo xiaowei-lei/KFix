@@ -1,5 +1,10 @@
 plugins {
     `kotlin-dsl`
+    application
+}
+
+application {
+    mainClass.set("com.kfix.patch.Main")
 }
 
 repositories {
