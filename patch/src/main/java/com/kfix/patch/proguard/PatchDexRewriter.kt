@@ -3,11 +3,18 @@ package com.kfix.patch.proguard
 import com.android.tools.apk.analyzer.internal.SigUtils
 import com.android.tools.apk.analyzer.internal.rewriters.FieldReferenceWithNameRewriter
 import com.android.tools.apk.analyzer.internal.rewriters.MethodReferenceWithNameRewriter
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.formatter.DexFormatter
+import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.DexFile
+import com.android.tools.smali.dexlib2.iface.Field
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.rewriter.ClassDefRewriter
 import com.android.tools.smali.dexlib2.rewriter.DexRewriter
+import com.android.tools.smali.dexlib2.rewriter.FieldRewriter
+import com.android.tools.smali.dexlib2.rewriter.MethodRewriter
 import com.android.tools.smali.dexlib2.rewriter.Rewriter
 import com.android.tools.smali.dexlib2.rewriter.RewriterModule
 import com.android.tools.smali.dexlib2.rewriter.Rewriters
@@ -120,6 +127,47 @@ class PatchDexRewriter {
                         newFrame.signature
                     ) ?: methodReference.name.also {
                         Logger.i(TAG, "[MethodReferenceWithNameRewriter] not found related method ${typeName}#${methodReference.name} in old proguard map")
+                    }
+                }
+            }
+        }
+
+        private fun setPublic(accessFlags: Int): Int {
+            val wipePrivateOrProtected = accessFlags and AccessFlags.PRIVATE.value.inv() and AccessFlags.PROTECTED.value.inv()
+            return wipePrivateOrProtected or AccessFlags.PUBLIC.value
+        }
+
+        override fun getClassDefRewriter(rewriters: Rewriters): Rewriter<ClassDef> {
+            return object: ClassDefRewriter(rewriters) {
+                override fun rewrite(classDef: ClassDef): ClassDef {
+                    return object : RewrittenClassDef(classDef) {
+                        override fun getAccessFlags(): Int {
+                            return setPublic(super.getAccessFlags())
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun getMethodRewriter(rewriters: Rewriters): Rewriter<Method> {
+            return object: MethodRewriter(rewriters) {
+                override fun rewrite(value: Method): Method {
+                    return object: RewrittenMethod(value) {
+                        override fun getAccessFlags(): Int {
+                            return setPublic(super.getAccessFlags())
+                        }
+                    }
+                }
+            }
+        }
+
+        override fun getFieldRewriter(rewriters: Rewriters): Rewriter<Field> {
+            return object: FieldRewriter(rewriters) {
+                override fun rewrite(field: Field): Field {
+                    return object : RewrittenField(field) {
+                        override fun getAccessFlags(): Int {
+                            return setPublic(super.getAccessFlags())
+                        }
                     }
                 }
             }

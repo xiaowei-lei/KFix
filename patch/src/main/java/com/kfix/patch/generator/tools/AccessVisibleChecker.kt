@@ -4,24 +4,23 @@ import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.ClassDef
 
 class AccessVisibleChecker(
-    private val classDefProvider: (classDefType: String) -> ClassDef?,
+    private val calleeClassDefProvider: (classDefType: String) -> ClassDef?,
 ) {
     fun isTypeVisible(
         @Suppress("UNUSED_PARAMETER")
-        callerClass: String = "",
+        callerClass: String,
         type: String,
     ): Boolean {
-
-        val classDef = classDefProvider.invoke(type) ?: return true
+        val classDef = calleeClassDefProvider.invoke(type) ?: return true
         return AccessFlags.PUBLIC.isSet(classDef.accessFlags)
     }
 
     fun isFieldVisible(
-        callerClass: String = "",
+        callerClass: String,
         fieldDefiningClass: String,
         fieldName: String,
     ): Boolean {
-        val classDef = classDefProvider.invoke(fieldDefiningClass) ?: return true
+        val classDef = calleeClassDefProvider.invoke(fieldDefiningClass) ?: return true
         if (AccessFlags.PUBLIC.isSet(classDef.accessFlags)) {
             val field = classDef.fields.find { it.name == fieldName } ?: return false
             if (AccessFlags.PUBLIC.isSet(field.accessFlags)) {
@@ -35,12 +34,12 @@ class AccessVisibleChecker(
     }
 
     fun isMethodVisible(
-        callerClass: String = "",
+        callerClass: String,
         methodDefiningClass: String,
         methodName: String,
         methodParameterTypes: List<CharSequence>,
     ): Boolean {
-        val classDef = classDefProvider.invoke(methodDefiningClass) ?: return true
+        val classDef = calleeClassDefProvider.invoke(methodDefiningClass) ?: return true
         if (AccessFlags.PUBLIC.isSet(classDef.accessFlags)) {
             val method = classDef.methods.find {
                 it.name == methodName && it.parameterTypes == methodParameterTypes

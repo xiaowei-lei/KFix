@@ -9,12 +9,9 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 import com.kfix.patch.tools.AccessVisibleChecker
 
-class ClassDependencyAnalyzer(
+class PackagePrivateClassDependencyAnalyzer(
     private val classDefProvider: (classDefType: String) -> ClassDef?,
 ) {
-    companion object {
-        const val TAG = "ClassDependencyAnalyzer"
-    }
 
     private val accessVisibleChecker = AccessVisibleChecker(classDefProvider)
 
@@ -22,7 +19,10 @@ class ClassDependencyAnalyzer(
      * @param startClassNames collection of fully qualified class names.
      * @return All dependencies(fully qualified class name), include transitive dependencies.
      */
-    fun analyzeDependencies(startClassNames: Collection<String>): Collection<String> {
+    fun analyzeDependencies(
+        startClassNames: Collection<String>,
+        dependenciesFilter: (className: String) -> Boolean = { true },
+    ): Collection<String> {
         val startSignatures = startClassNames.map(SigUtils::typeToSignature)
         val handled = mutableSetOf<String>()
         val notHandled = ArrayDeque(startSignatures)
@@ -31,7 +31,9 @@ class ClassDependencyAnalyzer(
             handled.add(fqcn)
             val classDef = classDefProvider.invoke(fqcn)
             if (classDef != null) {
-                val dependencies = getDirectDependencies(classDef)
+                val dependencies = getDirectDependencies(classDef).filter {
+                    dependenciesFilter.invoke(SigUtils.signatureToName(it))
+                }
                 val notHandledDependencies = dependencies.subtract(handled)
                 notHandled.addAll(notHandledDependencies)
             }
@@ -39,8 +41,9 @@ class ClassDependencyAnalyzer(
 
         return handled.subtract(startSignatures.toSet()).map(SigUtils::signatureToName)
     }
+
     private fun getDirectDependencies(
-        classDef: ClassDef
+        classDef: ClassDef,
     ): Set<String> {
         return mutableSetOf<String?>()
             .apply {
@@ -50,7 +53,12 @@ class ClassDependencyAnalyzer(
                 addAll(classDef.fields.map { it.type })
             }
             .filterNotNull()
-            .filterNot { accessVisibleChecker.isTypeVisible(type = it) }
+            .filterNot {
+                accessVisibleChecker.isTypeVisible(
+                    callerClass = classDef.type,
+                    type = it
+                )
+            }
             .toMutableSet().apply {
                 addAll(classDef.methods.flatMap { it.referenceTypes(accessVisibleChecker) })
             }
@@ -81,6 +89,7 @@ class ClassDependencyAnalyzer(
                                 invisibleSet.add(reference.definingClass)
                             }
                         }
+
                         is MethodReference -> mutableSetOf<String>().apply {
                             add(reference.returnType)
                             add(reference.definingClass)
@@ -90,7 +99,8 @@ class ClassDependencyAnalyzer(
                                     methodName = reference.name,
                                     methodDefiningClass = reference.definingClass,
                                     methodParameterTypes = reference.parameterTypes
-                            )) {
+                                )
+                            ) {
                                 invisibleSet.add(reference.definingClass)
                             }
                         }
@@ -102,6 +112,7 @@ class ClassDependencyAnalyzer(
                         else -> emptySet()
                     }
                 }
+
                 else -> emptySet()
             }
         }.orEmpty()

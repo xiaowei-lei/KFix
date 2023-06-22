@@ -1,5 +1,7 @@
 package com.kfix.patch.generator
 
+import com.android.tools.proguard.ProguardMap
+import com.kfix.patch.apkanalyzer.ApkDisassembler
 import io.kotest.assertions.throwables.shouldThrowExactly
 import io.kotest.matchers.shouldBe
 import org.junit.Test
@@ -21,13 +23,22 @@ class PatchGeneratorTest {
         )
 
         patchFile.exists() shouldBe true
+
+        val expectChanged = listOf(
+            "com.example.kotlinhotfix.PatchedActivity",
+            "e2.g"
+        )
+
         val zipFile = ZipFile(patchFile)
-        val classNames = zipFile.getInputStream(zipFile.getEntry("changed.txt")).readBytes()
-            .toString(Charsets.UTF_8).split("\n")
-        classNames.sorted() shouldBe listOf(
-            "e2.g",
-            "com.example.kotlinhotfix.PatchedActivity"
-        ).sorted()
+        zipFile.getInputStream(zipFile.getEntry("changed.txt")).readBytes()
+            .toString(Charsets.UTF_8)
+            .split("\n") shouldBe expectChanged
+
+        ApkDisassembler(patchFile, ProguardMap())
+            .asDisassembleSequence()
+            .map { it.obfuscatedFullyQualifiedClassName }
+            .toList()
+            .sorted() shouldBe expectChanged
     }
 
     @Test

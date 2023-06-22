@@ -8,12 +8,12 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.Test
 
-internal class AccessVisibleCheckerTest {
+class AccessVisibleCheckerTest {
     private val classDef = mockk<ClassDef>(relaxed = true)
     private val checker = AccessVisibleChecker { classDef }
     private val noClassFoundChecker = AccessVisibleChecker { null }
 
-    private fun prepareClassDef(
+    private fun prepareCalleeClassDef(
         classAccessFlags: Int = 0,
         fieldName: String = "isLoading",
         fieldAccessFlags: Int = 0,
@@ -41,13 +41,14 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `field should be visible when fieldDefiningClass accessFlags is public and field accessFlags is public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             fieldAccessFlags = AccessFlags.PUBLIC.value,
             fieldName = "isLoading"
         )
 
         checker.isFieldVisible(
+            callerClass = "Lcom/example/MainActivity;",
             fieldDefiningClass = "Lcom/example/MainViewModel;",
             fieldName = "isLoading"
         ) shouldBe true
@@ -55,12 +56,13 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `field should be invisible when fieldDefiningClass accessFlags is not public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = 0,
             fieldAccessFlags = AccessFlags.PUBLIC.value,
         )
 
         checker.isFieldVisible(
+            callerClass = "Lcom/example/MainActivity;",
             fieldDefiningClass = "Lcom/example/MainViewModel;",
             fieldName = "isLoading"
         ) shouldBe false
@@ -68,12 +70,13 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `field should be invisible when field accessFlags is not public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             fieldAccessFlags = 0,
         )
 
         checker.isFieldVisible(
+            callerClass = "Lcom/example/MainActivity;",
             fieldDefiningClass = "Lcom/example/MainViewModel;",
             fieldName = "isLoading"
         ) shouldBe false
@@ -82,6 +85,7 @@ internal class AccessVisibleCheckerTest {
     @Test
     fun `field should be visible when fieldDefiningClass is not found`() {
         noClassFoundChecker.isFieldVisible(
+            callerClass = "Lcom/example/MainActivity;",
             fieldDefiningClass = "Lcom/example/MainViewModel;",
             fieldName = "isLoading"
         ) shouldBe true
@@ -89,7 +93,7 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `field should be visible when fieldDefiningClass is public and field is protected`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             fieldName = "isLoading",
             fieldAccessFlags = AccessFlags.PROTECTED.value
@@ -103,7 +107,7 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `method should be visible when methodDefiningClass accessFlags is public and method accessFlags is public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             methodAccessFlags = AccessFlags.PUBLIC.value,
             methodName = "reset",
@@ -111,6 +115,7 @@ internal class AccessVisibleCheckerTest {
         )
 
         checker.isMethodVisible(
+            callerClass = "Lcom/example/MainActivity;",
             methodDefiningClass = "Lcom/example/MainViewModel;",
             methodName = "reset",
             methodParameterTypes = listOf()
@@ -119,7 +124,7 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `method should be invisible when methodDefiningClass accessFlags is not public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = 0,
             methodAccessFlags = AccessFlags.PUBLIC.value,
             methodName = "reset",
@@ -127,6 +132,7 @@ internal class AccessVisibleCheckerTest {
         )
 
         checker.isMethodVisible(
+            callerClass = "Lcom/example/MainActivity;",
             methodDefiningClass = "Lcom/example/MainViewModel;",
             methodName = "reset",
             methodParameterTypes = listOf()
@@ -135,7 +141,7 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `method should be invisible when methodDefiningClass accessFlags is public but method accessFlags is not public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             methodAccessFlags = 0,
             methodName = "reset",
@@ -143,6 +149,7 @@ internal class AccessVisibleCheckerTest {
         )
 
         checker.isMethodVisible(
+            callerClass = "Lcom/example/MainActivity;",
             methodDefiningClass = "Lcom/example/MainViewModel;",
             methodName = "reset",
             methodParameterTypes = listOf()
@@ -153,15 +160,16 @@ internal class AccessVisibleCheckerTest {
     @Test
     fun `method should be visible when methodDefiningClass is not found`() {
         noClassFoundChecker.isMethodVisible(
-            methodDefiningClass = "Lcom/example/MainViewModel;",
-            methodName = "reset",
+            callerClass = "Lcom/example/MainActivity;",
+            methodDefiningClass = "Landroid/os/Bundle;",
+            methodName = "clear",
             methodParameterTypes = listOf()
         ) shouldBe true
     }
 
     @Test
     fun `method should be visible when methodDefiningClass is public and method is protected`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value,
             methodName = "onClear",
             methodAccessFlags = AccessFlags.PROTECTED.value
@@ -176,24 +184,33 @@ internal class AccessVisibleCheckerTest {
 
     @Test
     fun `type should be visible when accessFlags is public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PUBLIC.value
         )
 
-        checker.isTypeVisible(type = "Lcom/example/MainViewModel;") shouldBe true
+        checker.isTypeVisible(
+            callerClass = "Lcom/example/ViewModelHelper;",
+            type = "Lcom/example/MainViewModel;",
+        ) shouldBe true
     }
 
     @Test
     fun `type should be invisible when accessFlags is not public`() {
-        prepareClassDef(
+        prepareCalleeClassDef(
             classAccessFlags = AccessFlags.PROTECTED.value
         )
 
-        checker.isTypeVisible(type = "Lcom/example/MainViewModel;") shouldBe false
+        checker.isTypeVisible(
+            callerClass = "Lcom/example/ViewModelHelper;",
+            type = "Lcom/example/MainViewModel;"
+        ) shouldBe false
     }
 
     @Test
     fun `type should be visible when type is not found`() {
-        noClassFoundChecker.isTypeVisible(type = "Lcom/example/MainViewModel;") shouldBe true
+        noClassFoundChecker.isTypeVisible(
+            callerClass = "Landroidx/activity/ComponentActivity/Api33Impl;",
+            type = "Lcom/example/MainViewModel;"
+        ) shouldBe true
     }
 }

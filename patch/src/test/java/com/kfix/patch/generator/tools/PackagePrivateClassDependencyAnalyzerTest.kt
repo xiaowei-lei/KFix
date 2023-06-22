@@ -14,7 +14,7 @@ import org.junit.Test
 import java.io.File
 import java.util.Properties
 
-class ClassDependencyAnalyzerTest {
+class PackagePrivateClassDependencyAnalyzerTest {
 
     companion object {
         const val BUILD_TOOLS_VERSION = "33.0.0"
@@ -27,7 +27,7 @@ class ClassDependencyAnalyzerTest {
     private val sourceZipFile = File("build/test/ClassReferenceFinderTest/source.zip")
 
     private lateinit var apkDisassembler: ApkDisassembler
-    private lateinit var dependencyAnalyzer: ClassDependencyAnalyzer
+    private lateinit var dependencyAnalyzer: PackagePrivateClassDependencyAnalyzer
 
     @Before
     fun setup() {
@@ -36,7 +36,7 @@ class ClassDependencyAnalyzerTest {
             apkFile = sourceZipFile,
             proguardMap = ProguardMap()
         )
-        dependencyAnalyzer = ClassDependencyAnalyzer {
+        dependencyAnalyzer = PackagePrivateClassDependencyAnalyzer {
             apkDisassembler.disassemble(SigUtils.signatureToName(it))?.obfuscatedClassDef
         }
     }

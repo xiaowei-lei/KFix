@@ -2,7 +2,7 @@ package com.kfix.patch.log
 
 class Logger {
     companion object {
-        private const val COMMON_TAG = "KFix"
+        private const val COMMON_TAG = "kfix"
         fun i(tag: String, text: String) {
             println("[$COMMON_TAG][$tag]: $text")
         }
