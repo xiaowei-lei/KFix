@@ -12,6 +12,7 @@ public class SimpleApplication extends Application {
         super.attachBaseContext(base);
         Thread.setDefaultUncaughtExceptionHandler((t, e) -> {
             new KFixRuntime().reset();
+            e.printStackTrace();
             SimplePatchManager.removePatch(base);
             System.exit(1);
         });
@@ -19,7 +20,7 @@ public class SimpleApplication extends Application {
         if (patchPath != null) {
             File optimizedDirectory = new File(new File(patchPath).getParentFile(), "oDex");
             KFixRuntime kFixRuntime = new KFixRuntime();
-            kFixRuntime.apply(new Patch(patchPath, optimizedDirectory.getAbsolutePath(), null));
+            kFixRuntime.apply(this, new Patch(patchPath, optimizedDirectory.getAbsolutePath(), null));
             SimplePatchManager.removePatch(base);
         }
     }

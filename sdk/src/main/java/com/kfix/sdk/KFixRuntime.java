@@ -1,5 +1,6 @@
 package com.kfix.sdk;
 
+import android.app.Application;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
@@ -15,25 +16,27 @@ public class KFixRuntime {
 
     private static final String CHANGED_CLASSES_ENTRY_NAME = "changed.txt";
 
-    public void apply(Patch patch) {
+    public void apply(Application application, Patch patch) {
         try {
-            ClassLoader appClassLoader = KFixRuntime.class.getClassLoader();
-            ClassLoader appClassLoaderParent = appClassLoader != null ? appClassLoader.getParent() : null;
+            ClassLoader originalAppClassLoader = KFixRuntime.class.getClassLoader();
+            ClassLoader appClassLoaderParent = originalAppClassLoader != null ? originalAppClassLoader.getParent() : null;
             if (appClassLoaderParent != null) {
                 Set<String> patchClassSet = patchedClassOf(patch);
                 if (!patchClassSet.isEmpty()) {
-                    PatchDexClassLoader hotfixClassLoader = new PatchDexClassLoader(
+                    ClassLoaderInjector.inject(application, appClassLoaderParent);
+                    ClassLoader newHookedAppClassLoader = application.getClassLoader();
+                    PatchDexClassLoader patchDexClassLoader = new PatchDexClassLoader(
                             patch.path,
                             new File(patch.oDexPath),
                             patch.libraryPath,
                             patchClassSet,
-                            appClassLoader,
-                            appClassLoaderParent
+                            newHookedAppClassLoader,
+                            newHookedAppClassLoader.getParent()
                     );
-                    hackToParent(appClassLoader, hotfixClassLoader);
+                    hackToParent(newHookedAppClassLoader, patchDexClassLoader);
                 }
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
     }

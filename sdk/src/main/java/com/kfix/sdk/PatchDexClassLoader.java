@@ -36,15 +36,9 @@ public class PatchDexClassLoader extends BaseDexClassLoader {
                 return super.loadClass(className, resolve);
             } else {
                 shouldSkipPatchDexClassLoaderClassSet.add(className);
-                try {
-                    Class<?> hostAppLoaded = appClassLoader.loadClass(className);
-                    shouldSkipPatchDexClassLoaderClassSet.remove(className);
-                    return hostAppLoaded;
-                } catch (ClassNotFoundException exception) {
-                    System.out.println("leixiaowei=" + className + ", appClassLoader.loadClass exception message: " + exception.getMessage());
-                    throw exception;
-                }
-//                return hostAppLoaded;
+                Class<?> hostAppLoaded = appClassLoader.loadClass(className);
+                shouldSkipPatchDexClassLoaderClassSet.remove(className);
+                return hostAppLoaded;
             }
         }
     }
