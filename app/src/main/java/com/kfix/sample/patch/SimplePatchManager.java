@@ -1,7 +1,8 @@
-package com.kfix.sample;
+package com.kfix.sample.patch;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import com.kfix.sample.BuildConfig;
 
 public class SimplePatchManager {
     private static final String SP_FILE = "patch_" + BuildConfig.VERSION_CODE;

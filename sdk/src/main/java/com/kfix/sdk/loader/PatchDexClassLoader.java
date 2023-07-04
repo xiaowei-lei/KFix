@@ -1,4 +1,4 @@
-package com.kfix.sdk;
+package com.kfix.sdk.loader;
 
 import dalvik.system.BaseDexClassLoader;
 import java.io.File;

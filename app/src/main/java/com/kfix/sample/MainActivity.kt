@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kfix.sample.patch.SimplePatchManager
 import com.kfix.sample.second.SecondActivity
 import java.io.File
 

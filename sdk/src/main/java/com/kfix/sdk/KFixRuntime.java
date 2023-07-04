@@ -1,6 +1,9 @@
 package com.kfix.sdk;
 
 import android.app.Application;
+import com.kfix.sdk.loader.ClassLoaderInjector;
+import com.kfix.sdk.loader.PatchDexClassLoader;
+import com.kfix.sdk.log.Logger;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
@@ -36,8 +39,8 @@ public class KFixRuntime {
                     hackToParent(newHookedAppClassLoader, patchDexClassLoader);
                 }
             }
-        } catch (Throwable e) {
-            e.printStackTrace();
+        } catch (Throwable throwable) {
+            Logger.e("KFixRuntime#apply error!", throwable);
         }
     }
 
@@ -54,8 +57,8 @@ public class KFixRuntime {
                 child = tmpClassLoader;
                 tmpClassLoader = tmpClassLoader.getParent();
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable throwable) {
+            Logger.e("KFixRuntime#reset error!", throwable);
         }
     }
 
@@ -70,8 +73,8 @@ public class KFixRuntime {
                     return new HashSet<>(Arrays.asList(content.split("\n")));
                 }
             }
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Throwable throwable) {
+            Logger.e("KFixRuntime#patchedClassOf error!", throwable);
         }
         return Collections.emptySet();
     }

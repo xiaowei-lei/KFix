@@ -1,20 +1,22 @@
-package com.kfix.sdk;
+package com.kfix.sdk.loader;
 
 import android.app.Application;
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.res.Resources;
 import dalvik.system.PathClassLoader;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 
-class ClassLoaderInjector {
-    static void inject(Application application, ClassLoader patchClassLoader) throws Throwable {
+public class ClassLoaderInjector {
+    public static void inject(Application application, ClassLoader parentClassLoader) throws Throwable {
         // Cannot use PathClassLoader directly, will crash, but we can use DexClassLoader or Child class of PathClassLoader instead. todo: librarySearchPath
-        ClassLoader pathClassLoader = new KFixHookClassLoader(application.getPackageCodePath(), application.getApplicationInfo().nativeLibraryDir, patchClassLoader);
+        ApplicationInfo applicationInfo = application.getApplicationInfo();
+        ClassLoader pathClassLoader = new KFixHookClassLoader(applicationInfo.sourceDir, applicationInfo.nativeLibraryDir, parentClassLoader);
         replaceApplicationClassLoader(application, pathClassLoader);
     }
 
-    static class KFixHookClassLoader extends PathClassLoader {
+    public static class KFixHookClassLoader extends PathClassLoader {
         public KFixHookClassLoader(String dexPath, String librarySearchPath, ClassLoader parent) {
             super(dexPath, librarySearchPath, parent);
         }
