@@ -29,7 +29,9 @@ class SecondActivity : ComponentActivity() {
                     loadAction = viewModel::loadUser,
                     userState = state
                 )
-                ResetSection()
+                ResetSection(
+                    resetAction = viewModel::reset
+                )
             }
         }
     }
@@ -73,12 +75,12 @@ class SecondActivity : ComponentActivity() {
     }
 
     @Composable
-    fun ResetSection() {
+    fun ResetSection(resetAction: () -> Unit) {
         Button(
             modifier = Modifier.fillMaxWidth(),
-            onClick = {}
+            onClick = resetAction
         ) {
-            Text(text = "TODO: RESET")
+            Text(text = "RESET")
         }
     }
 }

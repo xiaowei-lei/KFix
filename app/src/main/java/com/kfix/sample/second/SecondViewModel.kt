@@ -30,6 +30,15 @@ class SecondViewModel: ViewModel() {
 
     private suspend fun getUser(): User {
         delay(2000)
-        TODO()
+        return User(
+            id = "0000001",
+            name = "Tom",
+            age = 20,
+            gender = "male"
+        )
+    }
+
+    fun reset() {
+        _screenStateFlow.update { ScreenState.Default() }
     }
 }
